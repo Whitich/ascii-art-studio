@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 ascii_studio_settings.json
+
+build/
+dist/
+installer-output/
+*.spec

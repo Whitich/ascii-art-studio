@@ -269,6 +269,7 @@ class App:
         self._busy = False
         self._closed = False
         self._source_photo = None
+        self.zoom = 1.0
 
         style = ttk.Style()
         try:
@@ -452,6 +453,11 @@ class App:
         right = tk.Frame(main, bg=BG)
         right.pack(fill="both", expand=True, padx=(4, 8), pady=8)
 
+        zoom_bar = tk.Frame(right, bg=BG)
+        zoom_bar.pack(fill="x", pady=(0, 6))
+        tk.Label(zoom_bar, text="Önizleme yakınlığı", bg=BG, fg=TEXT).pack(side="left")
+        for label, factor in (("−", 0.8), ("100%", 0), ("+", 1.25)):
+            tk.Button(zoom_bar, text=label, command=lambda f=factor: self.change_zoom(f), bg=BTN, fg=TEXT, relief="flat", padx=12).pack(side="left", padx=4)
         self.notebook = ttk.Notebook(right)
         self.notebook.pack(fill="both", expand=True)
         output_tab = tk.Frame(self.notebook, bg=PREVIEW_BG)
@@ -544,8 +550,8 @@ class App:
                 pass
         self._after_id = self.root.after(280, self.do_update)
 
-    def open_image(self):
-        path = filedialog.askopenfilename(
+    def open_image(self, path=None):
+        path = path or filedialog.askopenfilename(
             title="Resim seç",
             filetypes=[
                 ("Resimler", "*.png *.jpg *.jpeg *.bmp *.gif *.webp *.tga *.ico"),
@@ -682,13 +688,22 @@ class App:
         self._canvas_scroll_x.grid(row=1, column=0, sticky="ew")
         gray = self.var_mode.get() == "Yok"
         preset = RES_PRESETS.get(self.var_res.get(), RES_PRESETS["Standart"])
-        preview_font = min(preset["font"], 16)
+        preview_font = max(6, round(min(preset["font"], 16) * self.zoom))
         pil = render_ascii_image(self.rows, None if gray else [[output_color(c, self.var_mode.get()) for c in row] for row in self.colors],
                                  font_size=preview_font, grayscale=gray)
         self.photo = ImageTk.PhotoImage(pil)
         self.canvas.delete("all")
         self.canvas_img = self.canvas.create_image(0, 0, anchor="nw", image=self.photo)
         self.canvas.configure(scrollregion=(0, 0, pil.width, pil.height))
+
+    def change_zoom(self, factor):
+        self.zoom = 1.0 if factor == 0 else max(0.5, min(3.0, self.zoom * factor))
+        self.text.configure(font=("Consolas", max(6, round(10 * self.zoom))))
+        if self.rows and self.var_view.get() == "color":
+            try:
+                self._render_color()
+            except (ValueError, MemoryError) as ex:
+                self.status.config(text=str(ex))
 
     def switch_view(self):
         self.schedule_update()
@@ -841,8 +856,8 @@ class App:
         except (OSError, ValueError) as ex:
             messagebox.showerror("Proje kaydedilemedi", str(ex))
 
-    def open_project(self):
-        path = filedialog.askopenfilename(filetypes=[("ASCII Studio projesi", "*.asciiproject")])
+    def open_project(self, path=None):
+        path = path or filedialog.askopenfilename(filetypes=[("ASCII Studio projesi", "*.asciiproject")])
         if not path:
             return
         try:
@@ -889,4 +904,26 @@ class App:
 GREY_TXT = "#8888aa"
 
 if __name__ == "__main__":
-    App()
+    import argparse
+    parser = argparse.ArgumentParser(description="ASCII Art Studio")
+    parser.add_argument("file", nargs="?", help="Image or .asciiproject file")
+    parser.add_argument("--smoke-test", action="store_true", help=argparse.SUPPRESS)
+    args = parser.parse_args()
+    app = App(standalone=False)
+    if args.smoke_test:
+        app.root.withdraw()
+        app.img = Image.new("RGB", (32, 24), (120, 180, 240))
+        app.rows, app.colors = convert_image(app.img, width=40)
+        app._render_text()
+        app._render_color()
+        app.root.update()
+        app._closed = True
+        app._executor.shutdown(wait=False, cancel_futures=True)
+        app.root.destroy()
+    else:
+        if args.file:
+            if args.file.lower().endswith(".asciiproject"):
+                app.open_project(args.file)
+            else:
+                app.open_image(args.file)
+        app.root.mainloop()

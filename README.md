@@ -16,7 +16,13 @@ Türkçe arayüzlü, çevrimdışı ASCII/ANSI sanat stüdyosu.
 
 Proje dosyası kaynak görseli içerir; paylaşırken görselin de paylaşıldığını unutmayın.
 
-## Başlatma
+## Windows indir
+
+[Kurulum EXE ve taşınabilir ZIP](https://github.com/Whitich/ascii-art-studio/releases/latest) — Python kurulumu gerekmez. Windows x64 içindir. Dosyalar kod imzalı değildir; Windows bilinmeyen yayıncı uyarısı gösterebilir.
+
+Önizleme üzerindeki − / 100% / + düğmeleri yakınlığı değiştirir; dışa aktarma boyutu etkilenmez. Bir görseli veya .asciiproject dosyasını EXE üzerine bırakarak da açabilirsiniz.
+
+## Kaynak koddan başlatma
 
 Python 3.12+ ve Pillow 13 gerekir:
 
